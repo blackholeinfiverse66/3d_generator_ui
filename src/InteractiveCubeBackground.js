@@ -113,7 +113,7 @@ function OrbitingShape({ radius, speed, initialAngle, scale = 1, shapeType }) {
   );
 }
 
-export default function InteractiveCubeBackground() {
+function InteractiveCubeBackground() {
   const shapes = React.useMemo(() => ['cube', 'sphere', 'cylinder', 'cone', 'torus', 'octahedron', 'tetrahedron', 'dodecahedron', 'icosahedron'], []);
 
   const getRandomShape = () => shapes[Math.floor(Math.random() * shapes.length)];
@@ -253,3 +253,5 @@ export default function InteractiveCubeBackground() {
     </div>
   );
 }
+
+export default InteractiveCubeBackground;
