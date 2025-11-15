@@ -1,0 +1,209 @@
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.notification {
+  background: linear-gradient(135deg, 
+    rgba(0, 20, 40, 0.95), 
+    rgba(30, 0, 50, 0.95), 
+    rgba(40, 20, 60, 0.95)
+  );
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 255, 255, 0.2);
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  min-width: 300px;
+}
+
+.notification.visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.notification.exiting {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.notification-content {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  gap: 12px;
+}
+
+.notification-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.notification-message {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00);
+  animation: progress-shrink 5s linear forwards;
+  border-radius: 0 0 12px 12px;
+}
+
+/* Type-specific styles */
+.notification-success {
+  border-color: rgba(0, 255, 128, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 255, 128, 0.3);
+}
+
+.notification-success .notification-progress {
+  background: linear-gradient(90deg, #00ff80, #00ff40);
+}
+
+.notification-error {
+  border-color: rgba(255, 64, 64, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 64, 64, 0.3);
+}
+
+.notification-error .notification-progress {
+  background: linear-gradient(90deg, #ff4040, #ff6060);
+}
+
+.notification-warning {
+  border-color: rgba(255, 200, 0, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 200, 0, 0.3);
+}
+
+.notification-warning .notification-progress {
+  background: linear-gradient(90deg, #ffc800, #ffdd00);
+}
+
+.notification-info {
+  border-color: rgba(64, 164, 255, 0.4);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(64, 164, 255, 0.3);
+}
+
+.notification-info .notification-progress {
+  background: linear-gradient(90deg, #40a4ff, #60b4ff);
+}
+
+@keyframes progress-shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Hover effects */
+.notification:hover {
+  transform: translateX(-5px) scale(1.02);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(0, 255, 255, 0.4);
+}
+
+.notification:hover .notification-progress {
+  animation-play-state: paused;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .notification-container {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+  
+  .notification {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .notification-content {
+    padding: 12px;
+  }
+  
+  .notification-title {
+    font-size: 0.85rem;
+  }
+  
+  .notification-message {
+    font-size: 0.75rem;
+  }
+}
+
+/* Animation for multiple notifications */
+.notification:nth-child(n+4) {
+  opacity: 0.8;
+  transform: scale(0.95) translateX(0);
+}
+
+.notification:nth-child(n+6) {
+  display: none;
+}

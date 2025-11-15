@@ -1,0 +1,140 @@
+{
+  "designSystem": {
+    "colors": {
+      "neon-cyan": "#6EE7FF",
+      "neon-magenta": "#FF6EC7", 
+      "neon-gold": "#FFD57A",
+      "muted-white": "rgba(255,255,255,0.9)",
+      "background-gradient": "linear-gradient(180deg, #231233 0%, #2a1338 45%, #1b2130 100%)"
+    },
+    "glassmorphism": {
+      "alpha": 0.14,
+      "blur": "18px"
+    },
+    "spacing": {
+      "grid": "8px",
+      "radius-lg": "28px",
+      "radius-pill": "48px"
+    },
+    "transitions": {
+      "fast": "180ms",
+      "medium": "350ms", 
+      "slow": "650ms"
+    }
+  },
+  "components": {
+    "heroTitle": {
+      "fontFamily": "Orbitron, Poppins, sans-serif",
+      "fontWeight": 800,
+      "fontSize": {
+        "desktop": "4.2rem",
+        "tablet": "3.5rem",
+        "mobile": "2.8rem"
+      },
+      "textShadow": "0 6px 18px rgba(255,110,255,0.12), 0 0 28px rgba(110,231,255,0.10)",
+      "textStroke": "0.8px rgba(255,255,255,0.06)",
+      "ambientPulse": {
+        "duration": "3.6s",
+        "opacity": "0.08-0.12",
+        "scale": "1-1.1"
+      }
+    },
+    "inputField": {
+      "maxWidth": "820px",
+      "minHeight": "72px",
+      "borderRadius": "var(--radius-pill)",
+      "innerShadow": "inset 0 6px 24px rgba(0,0,0,0.45), 0 8px 36px rgba(0,0,0,0.35)",
+      "focusGlow": "0 0 18px rgba(110,231,255,0.16), 0 0 36px rgba(255,110,199,0.12)",
+      "placeholderTransition": "translateY(-34px) scale(0.9), opacity: 0.85"
+    },
+    "sidebar": {
+      "width": {
+        "desktop": "320px",
+        "collapsed": "56px"
+      },
+      "glassmorphism": "rgba(18,18,22,var(--glass-alpha))",
+      "backdropFilter": "blur(var(--glass-blur))",
+      "neonAccent": "inset 4px 0 18px rgba(110,231,255,0.06)",
+      "slideAnimation": "transform var(--transition-slow) ease-out"
+    },
+    "wireframeShapes": {
+      "count": 12,
+      "strokeWidth": "1px",
+      "strokeColor": "rgba(255,255,255,0.06)",
+      "parallax": {
+        "maxOffset": "20px",
+        "lerpValue": 0.085
+      },
+      "animation": {
+        "duration": "42s-120s",
+        "timing": "linear"
+      }
+    },
+    "buttons": {
+      "glowReduction": "20%",
+      "hoverLift": "translateY(-4px)",
+      "hoverGlow": "0 6px 24px rgba(110,231,255,0.08)",
+      "iconStroke": "2px"
+    },
+    "floatingHUD": {
+      "opacity": "0.06-0.10",
+      "scanDuration": "8s",
+      "pointerEvents": "none"
+    }
+  },
+  "accessibility": {
+    "contrast": "WCAG AA compliant",
+    "focusOutline": "2px solid rgba(110,231,255,0.6)",
+    "ariaLabels": "Required for all interactive elements",
+    "keyboardNavigation": "Full support"
+  },
+  "performance": {
+    "willChange": "transform only",
+    "animateProperties": ["transform", "opacity"],
+    "particleCount": {
+      "desktop": 12,
+      "mobile": 6
+    },
+    "targetFPS": ">=55"
+  },
+  "responsive": {
+    "breakpoints": {
+      "desktop": ">=1200px",
+      "tablet": "768-1199px", 
+      "mobile": "<768px"
+    },
+    "mobileOptimizations": [
+      "Disable parallax",
+      "Reduce animations",
+      "Cap particle count",
+      "Disable heavy box-shadows"
+    ]
+  },
+  "tunableVariables": {
+    "glowIntensity": {
+      "description": "Controls overall glow strength",
+      "range": "0.05-0.25",
+      "default": 0.12
+    },
+    "parallaxIntensity": {
+      "description": "Controls cursor parallax strength", 
+      "range": "0-8",
+      "default": 4
+    },
+    "particleCount": {
+      "description": "Number of background wireframe shapes",
+      "range": "6-20",
+      "default": 12
+    },
+    "glassBlur": {
+      "description": "Glassmorphism blur amount",
+      "range": "10px-30px", 
+      "default": "18px"
+    },
+    "transitionSpeed": {
+      "description": "Animation speed multiplier",
+      "range": "0.5-2.0",
+      "default": 1.0
+    }
+  }
+}
