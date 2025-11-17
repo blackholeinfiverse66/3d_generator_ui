@@ -1,12 +1,27 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import ThreeDViewer from './ThreeDViewer';
 import DonutBackground from './DonutBackground';
-import AdvancedInputPill from './AdvancedInputPill';
-
 import ErrorBoundary from './ErrorBoundary';
-import LoadingSkeleton from './LoadingSkeleton';
 import NotificationSystem, { useNotifications } from './NotificationSystem';
+
+import EnhancedInputPill from './components/EnhancedInputPill';
+import AdvancedLoadingStates from './components/AdvancedLoadingStates';
+import TabbedResultsView from './components/TabbedResultsView';
+import OnboardingTour from './components/OnboardingTour';
+import KeyboardShortcuts from './components/KeyboardShortcuts';
+import FeedbackSection from './components/FeedbackSection';
+import MaterialSwitcher from './components/MaterialSwitcher';
+import GLBViewer from './components/GLBViewer';
+import Gallery from './components/Gallery';
+import About from './components/About';
+import Help from './components/Help';
+import BeforeAfterComparison from './components/BeforeAfterComparison';
+import TransitionLoader from './components/TransitionLoader';
+import { HomeIcon, FolderIcon, InfoIcon, HelpIcon, BrainIcon, EyeIcon, PackageIcon } from './components/Icons';
 import './App.css';
+
+// API Configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api/v1';
+const AUTH_TOKEN = process.env.REACT_APP_AUTH_TOKEN || 'mock-jwt-token';
 
 function App() {
   const [prompt, setPrompt] = useState('');
@@ -19,6 +34,20 @@ function App() {
   const [isTyping, setIsTyping] = useState(false);
   const [showHUD, setShowHUD] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [theme, setTheme] = useState('dark');
+  const [isFirstVisit, setIsFirstVisit] = useState(true);
+  const [userId] = useState('user_123');
+  const [projectId] = useState('proj_001');
+  const [currentSpecId, setCurrentSpecId] = useState(null);
+  const [currentIterationId, setCurrentIterationId] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [designHistory, setDesignHistory] = useState([]);
+  const [isPolling, setIsPolling] = useState(false);
+  const [currentView, setCurrentView] = useState('home');
+  const [beforeAfterComparison, setBeforeAfterComparison] = useState(null);
+  const [showTransition, setShowTransition] = useState(false);
 
   const textareaRef = useRef(null);
   const titleRef = useRef(null);
@@ -74,9 +103,7 @@ function App() {
     setShowOutputs(false);
   }, []);
 
-  const toggleNav = useCallback(() => {
-    setShowNav(!showNav);
-  }, [showNav]);
+
 
   const handleGenerateClick = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -85,44 +112,38 @@ function App() {
     setError(null);
     setShowOutputs(false);
 
-    // Add a slight delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Show transition loader
+    setShowTransition(true);
+    
+    // Always use mock data for development since backend is not available
+    const mockData = {
+      spec_id: 'spec_' + Date.now(),
+      iteration_id: 'iter_' + Date.now(),
+      spec_json: {
+        type: prompt.toLowerCase().includes('chair') ? 'chair' : 
+              prompt.toLowerCase().includes('table') ? 'table' : 
+              prompt.toLowerCase().includes('lamp') ? 'lamp' : 'furniture',
+        style: 'modern',
+        material: 'wood',
+        dimensions: { width: 50, height: 80, depth: 45 },
+        objects: [
+          { object_id: 'base_1', name: 'base', material: 'oak', color: '#8B4513' },
+          { object_id: 'surface_1', name: 'surface', material: 'glass', color: '#E6E6FA' }
+        ],
+        colors: { primary: '#8B4513', secondary: '#E6E6FA', accent: '#FFD700' },
+        prompt: prompt
+      },
+      preview_url: null
+    };
+    
+    console.log('Using mock data:', mockData.spec_json);
+    setJsonSpec(mockData.spec_json);
+    setCurrentSpecId(mockData.spec_id);
+    setCurrentIterationId(mockData.iteration_id);
+    setPreviewUrl(mockData.preview_url);
+  }, [prompt, userId, projectId]);
 
-    try {
-      const response = await fetch('http://localhost:3001/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      const data = await response.json();
-      setJsonSpec(data);
-      
-      // Smooth transition to results
-      setTimeout(() => {
-        setShowOutputs(true);
-      }, 300);
-    } catch (error) {
-      const errorMessage = 'Failed to generate design. Please check if the backend server is running.';
-      setError(errorMessage);
-      setShowOutputs(false);
-      
-      addNotification({
-        type: 'error',
-        title: 'Generation Failed',
-        message: 'Unable to connect to the design service. Please try again.',
-        duration: 6000
-      });
-      
-      console.error("Fetch error:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [prompt, addNotification]);
-
-  // Load saved designs on mount
+  // Load saved designs and check first visit on mount
   useEffect(() => {
     const saved = localStorage.getItem('savedDesigns');
     if (saved) {
@@ -134,7 +155,22 @@ function App() {
         localStorage.removeItem('savedDesigns');
       }
     }
+    
+    const hasVisited = localStorage.getItem('hasVisited');
+    if (!hasVisited) {
+      setIsFirstVisit(true);
+      setShowOnboarding(true);
+      localStorage.setItem('hasVisited', 'true');
+    } else {
+      setIsFirstVisit(false);
+    }
+    
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
   }, []);
+
+
 
   const handleExportDesign = useCallback(() => {
     if (!jsonSpec) {
@@ -174,6 +210,10 @@ function App() {
     }
   }, [jsonSpec, addNotification]);
 
+  const toggleNav = useCallback(() => {
+    setShowNav(!showNav);
+  }, [showNav]);
+
   const handleKeyDown = useCallback((event) => {
       if (event.ctrlKey && event.key === 'Enter' && prompt.trim() && !isLoading) {
         event.preventDefault();
@@ -191,10 +231,16 @@ function App() {
         event.preventDefault();
         handleReset();
       }
-      if (event.key === 'Escape' && showNav) {
-        toggleNav();
+      if (event.ctrlKey && (event.key === '?' || event.key === '/')) {
+        event.preventDefault();
+        setShowShortcuts(!showShortcuts);
       }
-  }, [prompt, isLoading, showNav, handleGenerateClick, handleReset, handleSaveDesign, handleExportDesign, toggleNav]);
+      if (event.key === 'Escape') {
+        if (showNav) setShowNav(false);
+        if (showShortcuts) setShowShortcuts(false);
+        if (showOnboarding) setShowOnboarding(false);
+      }
+  }, [prompt, isLoading, showNav, showShortcuts, showOnboarding, handleGenerateClick, handleReset, handleSaveDesign, handleExportDesign]);
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -206,8 +252,10 @@ function App() {
     setIsTyping(true);
     
     const textarea = e.target;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    if (textarea && textarea.style && textarea.scrollHeight) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }
     
     if (window.typingTimeout) {
       clearTimeout(window.typingTimeout);
@@ -242,6 +290,12 @@ function App() {
     }
   }, [prompt, isLoading, handleGenerateClick]);
 
+  const handleTransitionComplete = useCallback(() => {
+    setShowTransition(false);
+    setIsLoading(false);
+    setShowOutputs(true);
+  }, []);
+
   const resetToHome = useCallback(() => {
     setPrompt('');
     setJsonSpec(null);
@@ -249,6 +303,9 @@ function App() {
     setError(null);
     setShowOutputs(false);
     setShowNav(false);
+    setCurrentView('home');
+    setBeforeAfterComparison(null);
+    setShowTransition(false);
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -257,15 +314,244 @@ function App() {
 
   const handleNavigation = useCallback((view) => {
     setShowNav(false);
+    setCurrentView(view);
     if (view === 'home') {
       resetToHome();
     }
   }, [resetToHome]);
 
 
+
+  const handleThemeChange = useCallback((newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+  }, []);
+
+  const cancelGeneration = useCallback(() => {
+    setIsLoading(false);
+    addNotification({
+      type: 'info',
+      title: 'Generation Cancelled',
+      message: 'Design generation was cancelled.',
+      duration: 3000
+    });
+  }, [addNotification]);
+
+  const handleEvaluate = useCallback(async (rating, feedback = '') => {
+    if (!currentSpecId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/evaluate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AUTH_TOKEN}`
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          spec_id: currentSpecId,
+          iteration_id: currentIterationId,
+          rating,
+          feedback
+        })
+      });
+
+      if (response.ok) {
+        addNotification({
+          type: 'success',
+          title: 'Feedback Submitted',
+          message: `Thank you for rating this design ${rating} stars!`,
+          duration: 3000
+        });
+      }
+    } catch (err) {
+      console.error('Evaluate failed:', err);
+      addNotification({
+        type: 'info',
+        title: 'Feedback Noted',
+        message: `Thank you for rating this design ${rating} stars!`,
+        duration: 3000
+      });
+    }
+  }, [currentSpecId, currentIterationId, userId, addNotification]);
+
+  const handleIterate = useCallback(async () => {
+    if (!currentSpecId) return;
+
+    setIsLoading(true);
+    // Store before state for comparison
+    const beforeSpec = { ...jsonSpec };
+    
+    // Mock iteration for development
+    const improvedSpec = {
+      ...jsonSpec,
+      style: jsonSpec.style === 'modern' ? 'contemporary' : 'modern',
+      dimensions: {
+        ...jsonSpec.dimensions,
+        height: jsonSpec.dimensions.height + 5
+      }
+    };
+    
+    setTimeout(() => {
+      setBeforeAfterComparison({ before: beforeSpec, after: improvedSpec });
+      setJsonSpec(improvedSpec);
+      setCurrentIterationId('iter_' + Date.now());
+      addNotification({
+        type: 'success',
+        title: 'Design Improved',
+        message: 'The design has been automatically improved!',
+        duration: 4000
+      });
+      setIsLoading(false);
+    }, 1500);
+  }, [currentSpecId, jsonSpec, addNotification]);
+
+  const handleMaterialSwitch = useCallback(async (objectId, material) => {
+    if (!currentSpecId || !jsonSpec) return;
+
+    // Mock material switch for development
+    const updatedSpec = {
+      ...jsonSpec,
+      objects: jsonSpec.objects.map(obj => 
+        obj.object_id === objectId 
+          ? { ...obj, material: material }
+          : obj
+      )
+    };
+    
+    setJsonSpec(updatedSpec);
+    addNotification({
+      type: 'success',
+      title: 'Material Updated',
+      message: `Material changed to ${material}`,
+      duration: 3000
+    });
+  }, [currentSpecId, jsonSpec, addNotification]);
+
+  const pollPreviewStatus = useCallback(async (statusUrl) => {
+    setIsPolling(true);
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(statusUrl, {
+          headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` }
+        });
+        const data = await response.json();
+
+        if (data.status === 'completed' && data.preview_url) {
+          setPreviewUrl(data.preview_url);
+          setIsPolling(false);
+          addNotification({
+            type: 'success',
+            title: 'Preview Ready',
+            message: 'Your 3D preview has been generated!',
+            duration: 3000
+          });
+          return;
+        }
+
+        if (data.status === 'failed') {
+          setIsPolling(false);
+          addNotification({
+            type: 'error',
+            title: 'Preview Generation Failed',
+            message: 'Unable to generate preview. Please try again.',
+            duration: 4000
+          });
+          return;
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000);
+        } else {
+          setIsPolling(false);
+        }
+      } catch (err) {
+        console.error('Polling failed:', err);
+        setIsPolling(false);
+      }
+    };
+
+    poll();
+  }, [addNotification]);
+
+  const loadDesignHistory = useCallback(async () => {
+    // Mock history data for development
+    const mockHistory = [
+      {
+        spec_id: 'spec_001',
+        spec_version: 1,
+        spec_json: { type: 'chair', style: 'modern', material: 'wood' },
+        preview_url: null,
+        created_at: '2024-01-15T10:00:00Z'
+      },
+      {
+        spec_id: 'spec_001',
+        spec_version: 2,
+        iteration_id: 'iter_001',
+        spec_json: { type: 'chair', style: 'contemporary', material: 'metal' },
+        preview_url: null,
+        changed: { object_id: 'base_1', field: 'material', before: 'wood', after: 'metal' },
+        created_at: '2024-01-15T11:00:00Z'
+      },
+      {
+        spec_id: 'spec_002',
+        spec_version: 1,
+        spec_json: { type: 'table', style: 'minimalist', material: 'glass' },
+        preview_url: null,
+        created_at: '2024-01-16T09:00:00Z'
+      }
+    ];
+    setDesignHistory(mockHistory);
+  }, []);
+
+  const loadHistoryItem = useCallback((historyItem) => {
+    setJsonSpec(historyItem.spec_json);
+    setCurrentSpecId(historyItem.spec_id);
+    setCurrentIterationId(historyItem.iteration_id);
+    setPreviewUrl(historyItem.preview_url);
+    setCurrentView('home');
+    setShowOutputs(true);
+    addNotification({
+      type: 'success',
+      title: 'Design Loaded',
+      message: 'Previous design loaded successfully!',
+      duration: 3000
+    });
+  }, [addNotification]);
+
+  const loadGalleryDesign = useCallback((design) => {
+    setPrompt(design.prompt);
+    setJsonSpec(design.spec);
+    setCurrentView('home');
+    setShowOutputs(true);
+    addNotification({
+      type: 'success',
+      title: 'Design Loaded',
+      message: 'Gallery design loaded successfully!',
+      duration: 3000
+    });
+  }, [addNotification]);
+
+  // Load design history when showing outputs
+  useEffect(() => {
+    if (showOutputs) {
+      loadDesignHistory();
+    }
+  }, [showOutputs, loadDesignHistory]);
+
+
   return (
     <ErrorBoundary>
-      <div className="App" ref={appRef}>
+      <div className="App" ref={appRef} data-theme={theme}>
         <DonutBackground config={{
           objectCount: 16,
           majorRadius: 120,
@@ -273,12 +559,8 @@ function App() {
           reducedMode: window.innerWidth < 768
         }} />
         
-        {/* HUD Overlay */}
-        <div className="hud-overlay" data-hud={showHUD ? 'on' : 'off'}>
-          <div className="hud-element hud-reticle"></div>
-          <div className="hud-element hud-grid"></div>
-        </div>
 
+        
         {/* Navigation Button */}
         <button 
           className={`nav-toggle ${showNav ? 'nav-open' : ''}`} 
@@ -298,132 +580,145 @@ function App() {
               <h3>Design Studio</h3>
             </div>
             <ul role="list">
-              <li><button onClick={() => handleNavigation('home')} aria-label="Go to Home">🏠 Home</button></li>
-              <li><button onClick={() => handleNavigation('gallery')} aria-label="View Gallery">🎨 Gallery</button></li>
-              <li><button onClick={() => handleNavigation('about')} aria-label="About Information">ℹ️ About</button></li>
-              <li><button onClick={() => handleNavigation('help')} aria-label="Get Help">❓ Help</button></li>
+              <li><button onClick={() => handleNavigation('home')} aria-label="Go to Home"><HomeIcon size={18} /> Home</button></li>
+              <li><button onClick={() => handleNavigation('gallery')} aria-label="View Gallery"><FolderIcon size={18} /> Gallery</button></li>
+              <li><button onClick={() => handleNavigation('about')} aria-label="About Information"><InfoIcon size={18} /> About</button></li>
+              <li><button onClick={() => handleNavigation('help')} aria-label="Get Help"><HelpIcon size={18} /> Help</button></li>
             </ul>
             <div className="nav-footer">
               <div className="saved-count">
                 {savedDesigns.length} Saved Design{savedDesigns.length === 1 ? '' : 's'}
               </div>
-              <div className="keyboard-shortcuts">
-                <small>Shortcuts: Ctrl+Enter (Generate), Ctrl+S (Save), Ctrl+E (Export)</small>
+              <div className="theme-selector">
+                <label>Theme:</label>
+                <select value={theme} onChange={(e) => handleThemeChange(e.target.value)}>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="auto">Auto</option>
+                </select>
               </div>
-              <button 
-                onClick={() => setShowHUD(!showHUD)}
-                className="hud-toggle"
-                aria-label={`${showHUD ? 'Hide' : 'Show'} HUD elements`}
-              >
-                {showHUD ? '🔲' : '⬜'} HUD
-              </button>
+              <div className="keyboard-shortcuts">
+                <small>Press Ctrl+? for shortcuts</small>
+              </div>
             </div>
           </div>
         </nav>
 
         {/* Overlay for mobile */}
         {showNav && <div className="nav-overlay" onClick={toggleNav}></div>}
+        
 
-        <main className={showOutputs ? "container results" : "container centered"}>
-          <h1 
-            ref={titleRef}
-            className={showOutputs ? "title-results" : ""}
-            onClick={showOutputs ? resetToHome : undefined}
-            data-text="3D Design Generator"
-            tabIndex={showOutputs ? 0 : -1}
-            role={showOutputs ? "button" : "heading"}
-            aria-level={showOutputs ? undefined : "1"}
-          >
-            3D Design Generator
-          </h1>
 
+        <main className={currentView === 'home' && showOutputs ? "container results" : "container centered"}>
           {/* Notification System */}
           <NotificationSystem 
             notifications={notifications}
             onDismiss={removeNotification}
           />
 
-          {!showOutputs && (
+          {/* Animated Title */}
+          <div className={`title-container ${(currentView === 'home' && (showOutputs || isLoading)) || currentView !== 'home' ? 'title-compact' : 'title-centered'}`}>
+            <h1 className="main-title" onClick={resetToHome} style={{ cursor: currentView !== 'home' || showOutputs || isLoading ? 'pointer' : 'default' }}>
+              3D Design Generator
+              <span className="version-badge">Beta</span>
+            </h1>
+          </div>
+
+          {currentView === 'gallery' && (
+            <Gallery 
+              savedDesigns={savedDesigns}
+              onLoadDesign={loadGalleryDesign}
+            />
+          )}
+
+          {currentView === 'about' && <About />}
+          
+          {currentView === 'help' && <Help />}
+
+          {currentView === 'home' && !showOutputs && !showTransition && (
             <div className="hero-content">
-              <AdvancedInputPill
+              <div className="hero-subtitle-section">
+                <p className="hero-subtitle">Transform your imagination into stunning 3D designs with AI</p>
+              </div>
+              
+              <EnhancedInputPill
                 value={prompt}
                 onChange={handlePromptChange}
                 onGenerate={handleGenerateClick}
                 isGenerating={isLoading}
-                onCancel={() => setIsLoading(false)}
-                placeholder="Describe your 3D design idea..."
+                onCancel={cancelGeneration}
               />
               
-              <div className="hero-tagline">
-                <p className="tagline">Transform your imagination into stunning 3D designs</p>
-                <div className="feature-chips">
-                  <div className="feature-chip" tabIndex="0" role="button">
-                    <span className="chip-icon">⚡</span>
-                    <span className="chip-label">AI-Powered</span>
-                  </div>
-                  <div className="feature-chip" tabIndex="0" role="button">
-                    <span className="chip-icon">👁️</span>
-                    <span className="chip-label">Real-time Preview</span>
-                  </div>
-                  <div className="feature-chip" tabIndex="0" role="button">
-                    <span className="chip-icon">📦</span>
-                    <span className="chip-label">Export Ready</span>
-                  </div>
+              <div className="feature-chips">
+                <div className="feature-chip" tabIndex="0" role="button">
+                  <BrainIcon size={20} />
+                  <span className="chip-label">AI-Powered</span>
+                </div>
+                <div className="feature-chip" tabIndex="0" role="button">
+                  <EyeIcon size={20} />
+                  <span className="chip-label">Real-time Preview</span>
+                </div>
+                <div className="feature-chip" tabIndex="0" role="button">
+                  <PackageIcon size={20} />
+                  <span className="chip-label">Export Ready</span>
                 </div>
               </div>
             </div>
           )}
 
-          {showOutputs && (
-            <div className="output-section">
-              <div className="preview-area">
-                <div className="preview-header">
-                  <h2>3D Preview</h2>
-                  <div className="preview-actions">
-                    <button
-                      onClick={handleSaveDesign}
-                      className="action-button save-button"
-                      title="Save Design (Ctrl+S)"
-                      aria-label="Save current design"
-                    >
-                      💾 Save
-                    </button>
-                    <button
-                      onClick={handleExportDesign}
-                      className="action-button export-button"
-                      title="Export JSON (Ctrl+E)"
-                      aria-label="Export design as JSON"
-                    >
-                      📥 Export
-                    </button>
-                  </div>
-                </div>
-                <div className="preview-canvas-container" role="img" aria-label="3D design preview">
-                  <ThreeDViewer />
-                </div>
-              </div>
-              <div className="json-viewer">
-                <h2>Generated JSON Specification</h2>
-                {error && (
-                  <pre className="error-message" role="alert" aria-label="Error message">
-                    {error}
-                  </pre>
-                )}
-                {jsonSpec && (
-                  <pre aria-label="Generated design specification">
-                    {JSON.stringify(jsonSpec, null, 2)}
-                  </pre>
-                )}
-              </div>
+          {/* Transition Loader */}
+          <TransitionLoader 
+            isVisible={showTransition}
+            prompt={prompt}
+            onComplete={handleTransitionComplete}
+          />
+
+          {currentView === 'home' && showOutputs && (
+            <div style={{ transform: 'none', animation: 'none', transition: 'none' }}>
+              <TabbedResultsView
+                jsonSpec={jsonSpec}
+                error={error}
+                onSave={handleSaveDesign}
+                onExport={handleExportDesign}
+                onIterate={handleIterate}
+                savedDesigns={savedDesigns}
+                designHistory={designHistory}
+                onLoadHistory={loadHistoryItem}
+                ThreeDViewer={() => <GLBViewer previewUrl={previewUrl} jsonSpec={jsonSpec} />}
+              />
+              <MaterialSwitcher 
+                jsonSpec={jsonSpec}
+                onMaterialSwitch={handleMaterialSwitch}
+              />
+              <FeedbackSection onFeedback={handleEvaluate} />
             </div>
           )}
 
-          {isLoading && showOutputs && (
-            <div className="output-section">
-              <LoadingSkeleton type="results" />
-            </div>
-          )}
         </main>
+        
+        {/* Advanced Loading States */}
+        <AdvancedLoadingStates 
+          isLoading={isLoading}
+          onCancel={cancelGeneration}
+        />
+        
+        {/* Onboarding Tour */}
+        <OnboardingTour 
+          isVisible={showOnboarding}
+          onComplete={handleOnboardingComplete}
+        />
+        
+        {/* Keyboard Shortcuts */}
+        <KeyboardShortcuts 
+          isVisible={showShortcuts}
+          onClose={() => setShowShortcuts(false)}
+        />
+        
+        {/* Before/After Comparison */}
+        <BeforeAfterComparison 
+          comparison={beforeAfterComparison}
+          onClose={() => setBeforeAfterComparison(null)}
+        />
       </div>
     </ErrorBoundary>
   );

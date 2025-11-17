@@ -1,31 +1,33 @@
 {
-  "name": "my-final-app",
-  "version": "0.1.0",
+  "name": "3d-design-generator",
+  "version": "1.0.0",
+  "description": "AI-powered 3D design generation platform with React and Three.js",
   "private": true,
   "dependencies": {
-    "@react-three/drei": "^10.7.6",
-    "@react-three/fiber": "^9.3.0",
-    "@react-three/postprocessing": "^2.15.0",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.8.0",
-    "@testing-library/react": "^16.3.0",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "three": "^0.180.0",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "optionalDependencies": {
+    "three": "^0.158.0",
+    "@react-three/fiber": "^8.15.11",
+    "@react-three/drei": "^9.88.13"
   },
   "scripts": {
-    "start": "craco start",
-    "dev": "craco start",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
     "server": "node server.js",
-    "dummy-server": "node dummy-server.js",
-    "build": "craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject"
+    "install-3d": "npm install three @react-three/fiber @react-three/drei",
+    "dev": "concurrently \"npm run server\" \"npm start\"",
+    "build-mobile": "cd mobile && expo build:android"
   },
   "eslintConfig": {
     "extends": [
@@ -46,6 +48,21 @@
     ]
   },
   "devDependencies": {
-    "@craco/craco": "^7.1.0"
+    "concurrently": "^7.6.0"
+  },
+  "keywords": [
+    "3d-design",
+    "ai",
+    "react",
+    "threejs",
+    "design-generation",
+    "material-switching",
+    "3d-preview"
+  ],
+  "author": "Yash",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/3d-design-generator"
   }
 }
