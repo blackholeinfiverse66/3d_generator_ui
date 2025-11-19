@@ -479,7 +479,7 @@ function App() {
         setIsPolling(false);
       }
     };
-
+//Nothing
     poll();
   }, [addNotification]);
 
