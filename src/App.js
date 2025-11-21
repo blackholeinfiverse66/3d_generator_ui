@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import DonutBackground from './DonutBackground';
 import ErrorBoundary from './ErrorBoundary';
 import NotificationSystem, { useNotifications } from './NotificationSystem';
+import { CONSTANTS, createNotification } from './constants';
 
 import EnhancedInputPill from './components/EnhancedInputPill';
 import AdvancedLoadingStates from './components/AdvancedLoadingStates';
@@ -231,7 +232,7 @@ function App() {
         event.preventDefault();
         handleReset();
       }
-      if (event.ctrlKey && (event.key === '?' || event.key === '/')) {
+      if (event.ctrlKey && event.shiftKey && event.key === '?') {
         event.preventDefault();
         setShowShortcuts(!showShortcuts);
       }
@@ -247,6 +248,8 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const typingTimeoutRef = useRef(null);
+  
   const handlePromptChange = useCallback((e) => {
     setPrompt(e.target.value);
     setIsTyping(true);
@@ -257,12 +260,12 @@ function App() {
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
     
-    if (window.typingTimeout) {
-      clearTimeout(window.typingTimeout);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
     }
-    window.typingTimeout = setTimeout(() => {
+    typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
-    }, 1000);
+    }, CONSTANTS.TYPING_TIMEOUT);
   }, []);
 
   const handleInputFocus = useCallback(() => {
@@ -275,8 +278,8 @@ function App() {
 
   useEffect(() => {
     return () => {
-      if (window.typingTimeout) {
-        clearTimeout(window.typingTimeout);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
       }
     };
   }, []);
@@ -326,6 +329,12 @@ function App() {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+    // Force re-render to ensure all components respect theme change
+    setTimeout(() => {
+      document.body.style.display = 'none';
+      void document.body.offsetHeight; // Trigger reflow
+      document.body.style.display = '';
+    }, 0);
   }, []);
 
   const handleOnboardingComplete = useCallback(() => {
@@ -334,12 +343,11 @@ function App() {
 
   const cancelGeneration = useCallback(() => {
     setIsLoading(false);
-    addNotification({
-      type: 'info',
-      title: 'Generation Cancelled',
-      message: 'Design generation was cancelled.',
-      duration: 3000
-    });
+    addNotification(createNotification(
+      'info',
+      'Generation Cancelled',
+      CONSTANTS.ERRORS.GENERATION_CANCELLED
+    ));
   }, [addNotification]);
 
   const handleEvaluate = useCallback(async (rating, feedback = '') => {
@@ -553,10 +561,10 @@ function App() {
     <ErrorBoundary>
       <div className="App" ref={appRef} data-theme={theme}>
         <DonutBackground config={{
-          objectCount: 16,
-          majorRadius: 120,
-          minorRadius: 0,
-          reducedMode: window.innerWidth < 768
+          objectCount: CONSTANTS.DONUT_OBJECT_COUNT,
+          majorRadius: CONSTANTS.DONUT_MAJOR_RADIUS,
+          minorRadius: CONSTANTS.DONUT_MINOR_RADIUS,
+          reducedMode: window.innerWidth < CONSTANTS.MOBILE_BREAKPOINT
         }} />
         
 
@@ -598,7 +606,7 @@ function App() {
                 </select>
               </div>
               <div className="keyboard-shortcuts">
-                <small>Press Ctrl+? for shortcuts</small>
+                <small>Press Ctrl+Shift+? for shortcuts</small>
               </div>
             </div>
           </div>

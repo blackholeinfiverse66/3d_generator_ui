@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { PlayIcon, CloseIcon } from './Icons';
+import { CONSTANTS } from '../constants';
 import './EnhancedInputPill.css';
 
 const ANIMATED_SUGGESTIONS = [
@@ -10,7 +12,7 @@ const ANIMATED_SUGGESTIONS = [
   "Industrial pendant light fixture"
 ];
 
-const EnhancedInputPill = ({ 
+const EnhancedInputPill = React.memo(({ 
   value, 
   onChange, 
   onGenerate, 
@@ -28,13 +30,20 @@ const EnhancedInputPill = ({
   const inputRef = useRef();
   const typingTimeoutRef = useRef();
 
-  const maxLength = 500;
+  const maxLength = CONSTANTS.MAX_PROMPT_LENGTH;
   const charCount = value.length;
   const isValid = charCount > 0 && charCount <= maxLength;
+  const isWarning = charCount > maxLength * CONSTANTS.PROMPT_WARNING_THRESHOLD;
 
-  // Animated placeholder typing effect
+  // Animated placeholder typing effect with proper cleanup
   useEffect(() => {
-    if (focused || value) return;
+    if (focused || value) {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      return;
+    }
     
     const typeText = () => {
       const text = ANIMATED_SUGGESTIONS[currentSuggestion];
@@ -46,12 +55,12 @@ const EnhancedInputPill = ({
         if (charIndex < text.length) {
           setDisplayText(text.substring(0, charIndex + 1));
           charIndex++;
-          typingTimeoutRef.current = setTimeout(typeChar, 50);
+          typingTimeoutRef.current = setTimeout(typeChar, CONSTANTS.TYPING_CHAR_DELAY);
         } else {
           setIsTyping(false);
           typingTimeoutRef.current = setTimeout(() => {
             setCurrentSuggestion((prev) => (prev + 1) % ANIMATED_SUGGESTIONS.length);
-          }, 2000);
+          }, CONSTANTS.SUGGESTION_DISPLAY_TIME);
         }
       };
       
@@ -63,9 +72,19 @@ const EnhancedInputPill = ({
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
     };
   }, [currentSuggestion, focused, value]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Progress simulation during generation
   useEffect(() => {
@@ -174,14 +193,16 @@ const EnhancedInputPill = ({
       </div>
 
       <div className="input-meta">
-        <div className={`char-counter ${charCount > maxLength * 0.9 ? 'warning' : ''}`}>
+        <div className={`char-counter ${isWarning ? 'warning' : ''}`}>
           {charCount}/{maxLength}
         </div>
-        {!isValid && value && (
+        {(!isValid && value) || isWarning ? (
           <div className="validation-error">
-            {charCount === 0 ? 'Please enter a description' : 'Description too long'}
+            {charCount === 0 ? 'Please enter a description' : 
+             charCount > maxLength ? 'Description too long' : 
+             'Approaching character limit'}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Recent Prompts Suggestions */}
@@ -209,6 +230,19 @@ const EnhancedInputPill = ({
       </div>
     </div>
   );
+});
+
+EnhancedInputPill.propTypes = {
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  onGenerate: PropTypes.func.isRequired,
+  isGenerating: PropTypes.bool,
+  onCancel: PropTypes.func
+};
+
+EnhancedInputPill.defaultProps = {
+  isGenerating: false,
+  onCancel: () => {}
 };
 
 export default EnhancedInputPill;

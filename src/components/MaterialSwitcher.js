@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
+import PropTypes from 'prop-types';
 
-const MaterialSwitcher = ({ jsonSpec, onMaterialSwitch }) => {
+const MaterialSwitcher = React.memo(({ jsonSpec, onMaterialSwitch }) => {
   const [selectedObject, setSelectedObject] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +75,21 @@ const MaterialSwitcher = ({ jsonSpec, onMaterialSwitch }) => {
       </div>
     </div>
   );
+});
+
+MaterialSwitcher.propTypes = {
+  jsonSpec: PropTypes.shape({
+    objects: PropTypes.arrayOf(PropTypes.shape({
+      object_id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      material: PropTypes.string
+    }))
+  }),
+  onMaterialSwitch: PropTypes.func.isRequired
+};
+
+MaterialSwitcher.defaultProps = {
+  jsonSpec: null
 };
 
 export default MaterialSwitcher;

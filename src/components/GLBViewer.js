@@ -1,29 +1,46 @@
 import React, { useRef, useEffect, useState } from 'react';
-// Fallback for when Three.js is not installed
-let Canvas, useFrame, OrbitControls, Environment, ContactShadows;
+import PropTypes from 'prop-types';
+import { CONSTANTS, handleError } from '../constants';
+// Safe Three.js dependency loading with fallback
+let Canvas, useFrame, OrbitControls, Environment, ContactShadows, GLTFLoader, Html;
+let threeJsAvailable = false;
+
 try {
   const fiber = require('@react-three/fiber');
   const drei = require('@react-three/drei');
+  const three = require('three');
+  
   Canvas = fiber.Canvas;
   useFrame = fiber.useFrame;
   OrbitControls = drei.OrbitControls;
   Environment = drei.Environment;
   ContactShadows = drei.ContactShadows;
+  Html = drei.Html;
+  GLTFLoader = three.GLTFLoader || require('three/examples/jsm/loaders/GLTFLoader').GLTFLoader;
+  
+  threeJsAvailable = true;
 } catch (e) {
-  console.warn('Three.js dependencies not installed');
+  const handledError = handleError(e, 'Three.js Dependencies');
+  console.warn(CONSTANTS.ERRORS.THREE_JS_UNAVAILABLE + ':', e.message);
+  threeJsAvailable = false;
 }
 
 // Animated Model Component (only used when Three.js is available)
-const AnimatedModel = ({ url }) => {
+const AnimatedModel = React.memo(({ url }) => {
   const meshRef = useRef();
   const [gltf, setGltf] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!url) return;
+    if (!url || !GLTFLoader) {
+      setError(new Error('No GLB file URL provided or GLTFLoader unavailable'));
+      return;
+    }
+    
+    setError(null);
+    setGltf(null);
     
     try {
-      const { GLTFLoader } = require('three/examples/jsm/loaders/GLTFLoader');
       const loader = new GLTFLoader();
       loader.load(
         url,
@@ -31,14 +48,23 @@ const AnimatedModel = ({ url }) => {
           setGltf(gltf);
           setError(null);
         },
-        undefined,
+        (progress) => {
+          console.log('Loading progress:', Math.round(progress.loaded / progress.total * 100) + '%');
+        },
         (error) => {
-          console.error('GLB loading error:', error);
-          setError(error);
+          const handledError = handleError(error, 'GLB Loading');
+          const userFriendlyError = new Error(
+            error.message.includes('404') ? CONSTANTS.ERRORS.GLB_NOT_FOUND :
+            error.message.includes('CORS') ? CONSTANTS.ERRORS.GLB_CORS_BLOCKED :
+            error.message.includes('parse') ? CONSTANTS.ERRORS.GLB_INVALID_FORMAT :
+            CONSTANTS.ERRORS.GLB_LOAD_FAILED
+          );
+          setError(userFriendlyError);
         }
       );
     } catch (e) {
-      setError(e);
+      const handledError = handleError(e, '3D Model Loader');
+      setError(new Error(CONSTANTS.ERRORS.GLB_LOADER_INIT_FAILED));
     }
   }, [url]);
 
@@ -49,11 +75,35 @@ const AnimatedModel = ({ url }) => {
     }
   });
 
-  if (error || !url) {
+  if (error) {
+    return (
+      <group>
+        <mesh ref={meshRef}>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#ff6b6b" />
+        </mesh>
+        <Html center>
+          <div style={{ 
+            background: 'rgba(0,0,0,0.8)', 
+            color: 'white', 
+            padding: '8px 12px', 
+            borderRadius: '6px', 
+            fontSize: '12px',
+            maxWidth: '200px',
+            textAlign: 'center'
+          }}>
+            ⚠️ {error.message}
+          </div>
+        </Html>
+      </group>
+    );
+  }
+  
+  if (!url) {
     return (
       <mesh ref={meshRef}>
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#ff6b6b" />
+        <meshStandardMaterial color="#666" />
       </mesh>
     );
   }
@@ -68,43 +118,68 @@ const AnimatedModel = ({ url }) => {
   }
 
   return <primitive ref={meshRef} object={gltf.scene} scale={[1, 1, 1]} />;
-};
+});
 
 // Static Model Component (fallback)
-const StaticModel = () => {
+const StaticModel = React.memo(() => {
   return (
     <mesh>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="#4ecdc4" />
     </mesh>
   );
-};
+});
 
-// Model selector
-const Model = ({ url }) => {
-  // Only render AnimatedModel if useFrame is available
-  if (useFrame) {
+// Model selector with error boundary
+const Model = React.memo(({ url }) => {
+  // Only render AnimatedModel if Three.js is fully available
+  if (threeJsAvailable && useFrame && GLTFLoader) {
     return <AnimatedModel url={url} />;
   }
   return <StaticModel />;
-};
+});
 
-const GLBViewer = ({ previewUrl, jsonSpec }) => {
+const GLBViewer = React.memo(({ previewUrl, jsonSpec }) => {
   const [lightingPreset, setLightingPreset] = useState('studio');
   const [zoom, setZoom] = useState(100);
 
-  // Fallback when Three.js is not available
-  if (!Canvas) {
+  // Enhanced fallback when Three.js is not available
+  if (!threeJsAvailable || !Canvas) {
     return (
-      <div style={{ width: '100%', height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
-        <div style={{ textAlign: 'center', color: '#666' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
-          <p>3D Preview</p>
-          <small>Three.js not installed</small>
+      <div style={{ 
+        width: '100%', 
+        height: '400px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        background: 'rgba(0,0,0,0.2)', 
+        borderRadius: '12px',
+        border: '2px dashed rgba(110,231,255,0.3)'
+      }}>
+        <div style={{ textAlign: 'center', color: 'var(--muted-white)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎲</div>
+          <h3 style={{ margin: '0 0 8px 0', color: 'var(--neon-cyan)' }}>3D Preview Unavailable</h3>
+          <p style={{ margin: '0 0 16px 0', opacity: 0.8 }}>Install Three.js dependencies for 3D rendering</p>
+          <code style={{ 
+            background: 'rgba(0,0,0,0.3)', 
+            padding: '8px 12px', 
+            borderRadius: '6px',
+            fontSize: '12px',
+            display: 'block',
+            marginBottom: '16px'
+          }}>
+            npm install three @react-three/fiber @react-three/drei
+          </code>
           {jsonSpec && (
-            <div style={{ marginTop: '16px', fontSize: '14px' }}>
-              <strong>{jsonSpec.type}</strong><br/>
-              {jsonSpec.style} • {jsonSpec.material}
+            <div style={{ 
+              marginTop: '16px', 
+              padding: '12px', 
+              background: 'rgba(110,231,255,0.1)',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}>
+              <strong style={{ color: 'var(--neon-cyan)' }}>{jsonSpec.type}</strong><br/>
+              <span style={{ opacity: 0.8 }}>{jsonSpec.style} • {jsonSpec.material}</span>
             </div>
           )}
         </div>
@@ -157,6 +232,20 @@ const GLBViewer = ({ previewUrl, jsonSpec }) => {
       </Canvas>
     </div>
   );
+});
+
+GLBViewer.propTypes = {
+  previewUrl: PropTypes.string,
+  jsonSpec: PropTypes.shape({
+    type: PropTypes.string,
+    style: PropTypes.string,
+    material: PropTypes.string
+  })
+};
+
+GLBViewer.defaultProps = {
+  previewUrl: null,
+  jsonSpec: null
 };
 
 export default GLBViewer;

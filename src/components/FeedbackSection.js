@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import { CONSTANTS } from '../constants';
 
-const StarIcon = ({ filled, onClick, onHover, onLeave }) => (
+const StarIcon = React.memo(({ filled, onClick, onHover, onLeave }) => (
   <svg
     width="24"
     height="24"
@@ -15,9 +17,9 @@ const StarIcon = ({ filled, onClick, onHover, onLeave }) => (
   >
     <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
   </svg>
-);
+));
 
-const FeedbackSection = ({ onFeedback }) => {
+const FeedbackSection = React.memo(({ onFeedback }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -29,7 +31,7 @@ const FeedbackSection = ({ onFeedback }) => {
     if (onFeedback) {
       onFeedback(starRating, feedback);
     }
-    setTimeout(() => setSubmitted(false), 2000);
+    setTimeout(() => setSubmitted(false), CONSTANTS.FEEDBACK_HIDE_DELAY);
   };
 
   return (
@@ -60,6 +62,10 @@ const FeedbackSection = ({ onFeedback }) => {
       </div>
     </div>
   );
+});
+
+FeedbackSection.propTypes = {
+  onFeedback: PropTypes.func.isRequired
 };
 
 export default FeedbackSection;
